@@ -1,0 +1,76 @@
+
+struct Appliance {
+  String name;
+  float power;     // in watts
+  bool isOn;
+  unsigned long onTimeMillis;
+};
+
+Appliance appliances[] = {
+  {"Iron", 1000.0, false, 0},
+  {"TV", 150.0, false, 0},
+  {"Fan", 75.0, false, 0},
+  {"Bulb", 60.0, false, 0}
+};
+
+float credit = 5.00; // $5 starting credit
+float costPerKWh = 0.20;
+
+unsigned long previousMillis = 0;
+const long interval = 1000; // check every second
+
+void setup() {
+  Serial.begin(9600);
+  // Let's say Iron and TV are ON, Fan is ON for 3 hours later
+  appliances[0].isOn = true; // Iron
+  appliances[1].isOn = true; // TV
+  appliances[2].isOn = false; // Fan
+  appliances[3].isOn = false; // Bulb
+
+  appliances[0].onTimeMillis = millis(); // mark ON time
+  appliances[1].onTimeMillis = millis();
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+
+    float totalPower = 0.0; // in watts
+
+    for (int i = 0; i < 4; i++) {
+      if (appliances[i].isOn) {
+        totalPower += appliances[i].power;
+      }
+    }
+
+    float powerKW = totalPower / 1000.0; // convert to kW
+    float energyUsed = powerKW * (interval / 3600000.0); // in kWh (every 1 second)
+
+    credit -= energyUsed * costPerKWh;
+
+    Serial.print("Power: "); Serial.print(totalPower); Serial.print(" W");
+    Serial.print(" | Energy used: "); Serial.print(energyUsed, 6); Serial.print(" kWh");
+    Serial.print(" | Remaining Credit: $"); Serial.println(credit, 4);
+
+    // Fan turns ON after 5 seconds (simulating a delayed start)
+    if (!appliances[2].isOn && millis() - appliances[0].onTimeMillis > 5000) {
+      appliances[2].isOn = true;
+      appliances[2].onTimeMillis = millis();
+      Serial.println("Fan turned ON");
+    }
+
+    // After 3 hours of simulated fan use (we simulate faster), turn it off
+    if (appliances[2].isOn && millis() - appliances[2].onTimeMillis > (3000)) {
+      appliances[2].isOn = false;
+      Serial.println("Fan turned OFF after 3 simulated hours");
+    }
+
+    if (credit <= 0) {
+      Serial.println("Credit exhausted. Cutting power...");
+      for (int i = 0; i < 4; i++) {
+        appliances[i].isOn = false;
+      }
+    }
+  }
+}
