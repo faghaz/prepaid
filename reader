@@ -1,0 +1,70 @@
+
+
+#include <Keypad.h>
+#include <LiquidCrystal.h>
+
+const int relayPin = 7;
+float credit = 0.0;
+String inputCode = "";
+
+const String validToken = "123456"; // hardcoded token
+
+const byte ROWS = 4; 
+const byte COLS = 3;
+char keys[ROWS][COLS] = {
+  {'1','2','3'},
+  {'4','5','6'},
+  {'7','8','9'},
+  {'*','0','#'}
+};
+byte rowPins[ROWS] = {9, 8, 7, 6};
+byte colPins[COLS] = {5, 4, 3};
+
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+
+LiquidCrystal lcd(12, 11, 10, 5, 4, 3);
+
+void setup() {
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, LOW); // start OFF
+  lcd.begin(16, 2);
+  lcd.print("Enter Token:");
+}
+
+void loop() {
+  char key = keypad.getKey();
+  if (key) {
+    if (key == '#') {
+      if (inputCode == validToken) {
+        credit += 10.0;
+        lcd.clear();
+        lcd.print("Credit: ");
+        lcd.print(credit);
+        delay(1000);
+        digitalWrite(relayPin, HIGH); // turn ON
+      } else {
+        lcd.clear();
+        lcd.print("Invalid Token");
+        delay(1000);
+      }
+      inputCode = "";
+      lcd.clear();
+      lcd.print("Enter Token:");
+    } else {
+      inputCode += key;
+      lcd.setCursor(0, 1);
+      lcd.print(inputCode);
+    }
+  }
+
+  // Simulated energy use
+  if (credit > 0) {
+    delay(1000); // 1 sec = simulate usage
+    credit -= 0.01;
+    if (credit <= 0) {
+      digitalWrite(relayPin, LOW); // turn OFF
+      lcd.clear();
+      lcd.print("Credit Used Up");
+    }
+  }
+}
